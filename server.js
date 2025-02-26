@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const textRoutes = require('./routes/textRoutes');
 const userRoutes = require('./routes/userRoutes');
+const setupSwagger = require('./swagger');
 const dotenv = require('dotenv');
 const cors = require('cors');
 
@@ -28,6 +29,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Initialize Swagger documentation
+setupSwagger(app);
 
 app.use((req, res, next) => {
   req.io = io;
