@@ -15,33 +15,78 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Define allowed origins
+// Define allowed origins including Vercel deployment URLs
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3002",
   "https://practical-task-backend.vercel.app",
   "https://actowiz.vercel.app",
   "https://actowiz-git-main.vercel.app",
-  "https://actowiz-staging.vercel.app"
+  "https://actowiz-staging.vercel.app",
+  // Add Vercel preview deployments pattern
+  /^https:\/\/actowiz.*\.vercel\.app$/
 ];
 
-// Simple CORS middleware
-app.use(cors({
-  origin: true, // Allow all origins temporarily for debugging
+// CORS configuration for production and development
+const corsOptions = {
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check if the origin matches our allowed origins (including regex patterns)
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept'
+  ]
+};
 
-// Initialize Socket.IO with CORS settings
+app.use(cors(corsOptions));
+
+// Socket.IO configuration with same CORS settings
 const io = socketIo(server, {
   cors: {
-    origin: "*", // Allow all origins temporarily for debugging
-    methods: ["GET", "POST"],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      
+      const isAllowed = allowedOrigins.some(allowedOrigin => {
+        if (allowedOrigin instanceof RegExp) {
+          return allowedOrigin.test(origin);
+        }
+        return allowedOrigin === origin;
+      });
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.log('Socket.IO - Blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
+    methods: ["GET", "POST"],
     transports: ['websocket', 'polling']
   },
-  allowEIO3: true // Enable compatibility mode
+  allowEIO3: true
 });
 
 app.use(express.json());
