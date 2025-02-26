@@ -17,27 +17,68 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:3000", 
   "http://localhost:3002",
-  "https://practical-task-backend.vercel.app"
+  "https://practical-task-backend.vercel.app",
+  "https://actowiz.vercel.app",
+  // Add a wildcard to allow requests from Vercel preview deployments
+  /^https:\/\/actowiz-.*\.vercel\.app$/
 ];
 
+// Function to validate origins against the list (including regex patterns)
+const corsOriginValidator = (origin, callback) => {
+  // Allow requests with no origin (like mobile apps, curl requests, etc)
+  if (!origin) return callback(null, true);
+  
+  // Check if the origin matches any in our list (including regex patterns)
+  const isAllowed = allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin instanceof RegExp) {
+      return allowedOrigin.test(origin);
+    }
+    return allowedOrigin === origin;
+  });
+  
+  if (isAllowed) {
+    return callback(null, true);
+  }
+  
+  console.log(`Origin ${origin} not allowed by CORS`);
+  callback(new Error('Not allowed by CORS'));
+};
+
+// Configure CORS for Express
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: corsOriginValidator,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// Configure Socket.io with the same CORS settings
 const io = socketIo(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type"],
+    origin: corsOriginValidator,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true
   }
 });
 
-app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:3002", "https://practical-task-backend.vercel.app"], // Allow both ports
-  credentials: true
-}));
+// Add security headers middleware
+app.use((req, res, next) => {
+  // Set referrer policy
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+  
+  // Set CORS headers explicitly to ensure they're not overridden
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // For preflight requests
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  }
+  
+  next();
+});
 
 app.use(express.json());
 
