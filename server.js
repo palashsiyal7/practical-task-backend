@@ -23,29 +23,30 @@ const allowedOrigins = [
   "https://actowiz-staging.vercel.app"
 ];
 
-// Simple CORS configuration
+// CORS configuration with preflight handling
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Configure Socket.io with CORS
 const io = socketIo(server, {
   cors: {
     origin: allowedOrigins,
-    credentials: true
+    methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   }
 });
 
-// Basic security headers
+// Security headers
 app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
