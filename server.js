@@ -14,6 +14,8 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+
+// Define allowed origins
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3002",
@@ -23,59 +25,23 @@ const allowedOrigins = [
   "https://actowiz-staging.vercel.app"
 ];
 
-// CORS configuration
+// Simple CORS middleware
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Origin blocked by CORS:', origin);
-      callback(null, true);  // Temporarily allow all origins for debugging
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin',
-    'X-Requested-With',
-    'Content-Type',
-    'Accept',
-    'Authorization',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Allow-Methods'
-  ],
+  origin: true, // Allow all origins temporarily for debugging
   credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-  maxAge: 86400 // 24 hours
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Configure Socket.io with CORS
+// Initialize Socket.IO with CORS settings
 const io = socketIo(server, {
   cors: {
-    origin: function(origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(null, true);  // Temporarily allow all origins for debugging
-      }
-    },
-    methods: ['GET', 'POST'],
+    origin: "*", // Allow all origins temporarily for debugging
+    methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }
-});
-
-// Security headers
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  next();
+    transports: ['websocket', 'polling']
+  },
+  allowEIO3: true // Enable compatibility mode
 });
 
 app.use(express.json());
@@ -83,12 +49,13 @@ app.use(express.json());
 // Initialize Swagger documentation
 setupSwagger(app);
 
+// Attach Socket.IO to request object
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Add this simple health check route before your other routes
+// Health check route
 app.get('/', (req, res) => {
   res.status(200).send('ok');
 });
@@ -97,17 +64,23 @@ app.use('/api/auth', authRoutes);
 app.use('/api/text', textRoutes);
 app.use('/api/users', userRoutes);
 
+// Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('New client connected');
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
+  console.log('New client connected:', socket.id);
+  
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+  
+  socket.on('disconnect', (reason) => {
+    console.log('Client disconnected:', socket.id, 'Reason:', reason);
   });
 });
 
-// Add this export at the end of your file
+// Export app for testing
 module.exports = app;
 
-// Keep your server.listen for local development
+// Start server in development
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 8000;
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
