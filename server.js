@@ -35,7 +35,7 @@ const io = socketIo(server, {
 });
 
 app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:3002"], // Allow both ports
+  origin: ["http://localhost:3000", "http://localhost:3002", "https://practical-task-backend.vercel.app"], // Allow both ports
   credentials: true
 }));
 
