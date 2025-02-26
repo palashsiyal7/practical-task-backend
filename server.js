@@ -14,9 +14,20 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = [
+  "http://localhost:3000", 
+  "http://localhost:3002",
+  "https://practical-task-backend.vercel.app"
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3002"], // Allow both ports
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
     credentials: true
@@ -49,5 +60,11 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 8000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Add this export at the end of your file
+module.exports = app;
+
+// Keep your server.listen for local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 8000;
+  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
