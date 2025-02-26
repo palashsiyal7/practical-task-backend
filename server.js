@@ -49,6 +49,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add this simple health check route before your other routes
+app.get('/', (req, res) => {
+  res.status(200).send('ok');
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/text', textRoutes);
 app.use('/api/users', userRoutes);
