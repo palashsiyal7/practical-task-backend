@@ -56,7 +56,7 @@ exports.login = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    console.log('User ID from token:', req);
+    // console.log('User ID from token:', req);
     const user = await User.findById(req.user.id).select('-password');
     res.json(user);
   } catch (error) {

@@ -21,3 +21,15 @@ exports.submitText = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.getSubmissions = async (req, res) => {
+  try {
+    const submissions = await TextSubmission.find()
+      .sort({ createdAt: -1 })
+      .populate('userId', 'email');
+      
+    res.json(submissions);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load submissions' });
+  }
+};
